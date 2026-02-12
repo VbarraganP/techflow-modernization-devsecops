@@ -13,7 +13,6 @@ name: "TechFlow: Despliegue Inteligente en Azure"
 # - BACKEND_CONTAINER     : (Requerido) Contenedor del backend (ej. tfstate)
 # - ACR_NAME              : (Requerido) Nombre del Azure Container Registry (ej. techflowacr)
 # - APP_NAME              : (Requerido) Nombre de la imagen para la aplicación API (ej. techflow-api)
-# - JOB_NAME              : (Requerido) Nombre de la imagen para el Job (ej. techflow-job)
 # - LOCATION              : (Requerido) Región de Azure (ej. eastus)
 #
 # NOTA: No se requiere AZURE_CLIENT_SECRET ya que se utiliza OIDC (identidad federada).
@@ -90,30 +89,12 @@ jobs:
               vuln-type: "os,library"
               severity: "CRITICAL,HIGH"
 
-         # --- Job Build & Scan ---
-         - name: Build Job Image
-           run: |
-              docker build -t ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.JOB_NAME }}:${{ github.sha }} ./job
-
-         - name: Run Trivy Scanner (Job)
-           uses: aquasecurity/trivy-action@master
-           with:
-              image-ref: "${{ vars.ACR_NAME }}.azurecr.io/${{ vars.JOB_NAME }}:${{ github.sha }}"
-              format: "table"
-              # exit-code: '1'
-              ignore-unfixed: true
-              vuln-type: "os,library"
-              severity: "CRITICAL,HIGH"
-
          # --- Push Images ---
          - name: Push Images to ACR
            if: success() # Only push if build and scans successful
            run: |
               docker push ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.APP_NAME }}:${{ github.sha }}
               docker push ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.APP_NAME }}:latest --force 2>/dev/null || true
-
-              docker push ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.JOB_NAME }}:${{ github.sha }}
-              docker push ${{ vars.ACR_NAME }}.azurecr.io/${{ vars.JOB_NAME }}:latest --force 2>/dev/null || true
 
    # -----------------------------------------------------------------------------
    # Phase 3: Deploy Infrastructure - Terraform
